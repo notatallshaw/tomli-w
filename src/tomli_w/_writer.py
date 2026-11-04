@@ -31,10 +31,13 @@ COMPACT_ESCAPES = MappingProxyType(
 
 
 class Context:
-    def __init__(self, allow_multiline: bool, indent: int):
+    def __init__(self, allow_multiline: bool, indent: int, datetime_separator: str):
         if indent < 0:
             raise ValueError("Indent width must be non-negative")
+        if datetime_separator not in (" ", "T", "t"):
+            raise ValueError("Datetime separator must be a space, 'T', or 't'")
         self.allow_multiline: Final = allow_multiline
+        self.datetime_separator: Final = datetime_separator
         # cache rendered inline tables (mapping from object id to rendered inline table)
         self.inline_table_cache: Final[dict[int, str]] = {}
         self.indent_str: Final = " " * indent
@@ -47,16 +50,22 @@ def dump(
     *,
     multiline_strings: bool = False,
     indent: int = 4,
+    datetime_separator: str = " ",
 ) -> None:
-    ctx = Context(multiline_strings, indent)
+    ctx = Context(multiline_strings, indent, datetime_separator)
     for chunk in gen_table_chunks(obj, ctx, name=""):
         fp.write(chunk.encode())
 
 
 def dumps(
-    obj: Mapping[str, Any], /, *, multiline_strings: bool = False, indent: int = 4
+    obj: Mapping[str, Any],
+    /,
+    *,
+    multiline_strings: bool = False,
+    indent: int = 4,
+    datetime_separator: str = " ",
 ) -> str:
-    ctx = Context(multiline_strings, indent)
+    ctx = Context(multiline_strings, indent, datetime_separator)
     return "".join(gen_table_chunks(obj, ctx, name=""))
 
 
@@ -101,6 +110,8 @@ def format_literal(obj: object, ctx: Context, *, nest_level: int = 0) -> str:
     if isinstance(obj, bool):
         return "true" if obj else "false"
     if isinstance(obj, (int, float, date, datetime)):
+        if ctx.datetime_separator != " " and isinstance(obj, datetime):
+            return obj.isoformat(sep=ctx.datetime_separator)
         return str(obj)
     if isinstance(obj, time):
         if obj.tzinfo:

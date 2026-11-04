@@ -19,6 +19,7 @@
   - [Does Tomli-W sort the document?](#does-tomli-w-sort-the-document)
   - [Does Tomli-W support writing documents with comments?](#does-tomli-w-support-writing-documents-with-comments)
   - [Can I customize insignificant whitespace?](#can-i-customize-insignificant-whitespace)
+  - [Can I use a T separator in datetimes?](#can-i-use-a-t-separator-in-datetimes)
   - [Why does Tomli-W not write a multi-line string if the string value contains newlines?](#why-does-tomli-w-not-write-a-multi-line-string-if-the-string-value-contains-newlines)
   - [Is Tomli-W output guaranteed to be valid TOML?](#is-tomli-w-output-guaranteed-to-be-valid-toml)
 
@@ -96,6 +97,24 @@ fruits = [
 """
 assert tomli_w.dumps(doc, indent=1) == expected_toml
 ```
+
+### Can I use a T separator in datetimes?<a name="can-i-use-a-t-separator-in-datetimes"></a>
+
+Pass `datetime_separator="T"` to `dump` or `dumps`:
+
+```python
+from datetime import datetime, timezone
+
+import tomli_w
+
+doc = {"uploaded": datetime(2026, 1, 2, tzinfo=timezone.utc)}
+assert (
+    tomli_w.dumps(doc, datetime_separator="T")
+    == "uploaded = 2026-01-02T00:00:00+00:00\n"
+)
+```
+
+The default is a space. Lowercase `"t"` is also supported.
 
 ### Why does Tomli-W not write a multi-line string if the string value contains newlines?<a name="why-does-tomli-w-not-write-a-multi-line-string-if-the-string-value-contains-newlines"></a>
 
