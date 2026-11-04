@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import date, datetime, time
+import sys
 from types import MappingProxyType
 
 TYPE_CHECKING = False
@@ -17,6 +18,8 @@ BARE_KEY_CHARS = frozenset(
 )
 ARRAY_TYPES = (list, tuple)
 MAX_LINE_LENGTH = 100
+# PyPy is faster with the Python loop.
+USE_STR_TRANSLATE = sys.implementation.name == "cpython"
 
 COMPACT_ESCAPES = MappingProxyType(
     {
@@ -28,6 +31,11 @@ COMPACT_ESCAPES = MappingProxyType(
         "\u005c": "\\\\",  # backslash
     }
 )
+# This table is passed to str.translate: ord(character) maps to its TOML escape.
+# Unlisted characters remain unchanged.
+STRING_ESCAPES = {ord(char): f"\\u{ord(char):04x}" for char in ILLEGAL_BASIC_STR_CHARS}
+# Prefer TOML's short escapes over the generic \uXXXX form.
+STRING_ESCAPES.update({ord(char): escape for char, escape in COMPACT_ESCAPES.items()})
 
 
 class Context:
@@ -187,6 +195,9 @@ def format_string(s: str, *, allow_multiline: bool) -> str:
     if do_multiline:
         result = '"""\n'
         s = s.replace("\r\n", "\n")
+    elif USE_STR_TRANSLATE and type(s) is str:
+        # String subclasses can override slicing.
+        return f'"{s.translate(STRING_ESCAPES)}"'
     else:
         result = '"'
 
